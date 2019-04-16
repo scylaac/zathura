@@ -489,6 +489,9 @@ sc_rotate(girara_session_t* session, girara_argument_t* argument,
   return false;
 }
 
+
+// Modified 2018-09-28 by Yang Yujie (yangyujie@sjtu.edu.cn)
+// to enable fixed-viewport-position page scrolling
 bool
 sc_scroll(girara_session_t* session, girara_argument_t* argument,
           girara_event_t* event, unsigned int t)
@@ -540,6 +543,17 @@ sc_scroll(girara_session_t* session, girara_argument_t* argument,
   unsigned int doc_height = 0;
   zathura_document_get_document_size(zathura->document, &doc_height, &doc_width);
 
+
+  /* YYJ: Get all page metrics	*/
+  unsigned int page_width = 0;
+  unsigned int page_height = 0;
+  unsigned int padding = zathura_document_get_page_padding (zathura -> document);
+  zathura_document_get_cell_size(zathura->document, &page_height, &page_width);
+
+  /* YYJ: Don't forget the padding between pages	*/
+  page_height += padding;
+  page_width += padding;
+
   float scroll_step = 40;
   girara_setting_get(session, "scroll-step", &scroll_step);
   float scroll_hstep = -1;
@@ -565,16 +579,26 @@ sc_scroll(girara_session_t* session, girara_argument_t* argument,
   const double vstep = (double)view_height / (double)doc_height;
   const double hstep = (double)view_width / (double)doc_width;
 
+  /* YYJ: Compute the pagewise step	*/
+  const double pagewise_vstep = (double)page_height / (double)doc_height;
+  const double pagewise_hstep = (double)page_width / (double)doc_width;
+
   /* compute new position */
   switch (argument->n) {
     case FULL_UP:
     case FULL_DOWN:
-      pos_y += direction * (1.0 - scroll_full_overlap) * vstep;
-      break;
+      //pos_y += direction * (1.0 - scroll_full_overlap) * vstep;
+	  
+      // YYJ: increment the position at the scale of a page instead of a viewport 
+	  pos_y += direction * (1.0 - scroll_full_overlap) * pagewise_vstep;
+	  break;
 
     case FULL_LEFT:
     case FULL_RIGHT:
-      pos_x += direction * (1.0 - scroll_full_overlap) * hstep;
+      //pos_x += direction * (1.0 - scroll_full_overlap) * hstep;
+
+      // YYJ: increment the position at the scale of a page instead of a viewport 
+	  pos_x += direction * (1.0 - scroll_full_overlap) * pagewise_hstep;
       break;
 
     case HALF_UP:
